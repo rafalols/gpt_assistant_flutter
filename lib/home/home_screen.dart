@@ -1,7 +1,12 @@
 import 'package:desktop_assistant/home/home_state.dart';
 import 'package:desktop_assistant/model/gpt_mode.dart';
+import 'package:desktop_assistant/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:flutter_platform_alert/flutter_platform_alert.dart';
+import 'package:flutter_platform_alert/flutter_platform_alert.dart';
 
 import '../model/message_sender.dart';
 import 'home_cubit.dart';
@@ -15,6 +20,8 @@ class HomeScreen extends StatelessWidget {
       create: (context) => HomeCubit(),
       child: BlocBuilder<HomeCubit, HomeState>(
         builder: (context, state) {
+          registerKeys(context);
+
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -30,7 +37,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildButtons(BuildContext context, HomeState state) => SingleChildScrollView(
+  Widget _buildButtons(BuildContext context, HomeState state) =>
+      SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
@@ -67,16 +75,26 @@ class HomeScreen extends StatelessWidget {
       onTap: () => context.read<HomeCubit>().changeGptMode(mode),
       child: Card(
         color: state.gptMode == mode
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Theme.of(context).colorScheme.tertiaryContainer,
-        child: Padding(padding: EdgeInsets.all(16), child: Text(title)),
+            ? Theme
+            .of(context)
+            .colorScheme
+            .primaryContainer
+            : Theme
+            .of(context)
+            .colorScheme
+            .tertiaryContainer,
+        child: Padding(padding: const EdgeInsets.all(16), child: Text(title)),
       ),
     );
   }
 
-  Widget _buildChatWindow(BuildContext context, HomeState state) => Expanded(
+  Widget _buildChatWindow(BuildContext context, HomeState state) =>
+      Expanded(
         child: Card(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme
+              .of(context)
+              .colorScheme
+              .surface,
           child: ListView.builder(
             itemCount: state.messages.length,
             itemBuilder: (context, index) {
@@ -87,8 +105,14 @@ class HomeScreen extends StatelessWidget {
                   alignment: message.sender == MessageSender.user ? Alignment.centerRight : Alignment.centerLeft,
                   child: Card(
                     color: message.sender == MessageSender.user
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.tertiaryContainer,
+                        ? Theme
+                        .of(context)
+                        .colorScheme
+                        .primaryContainer
+                        : Theme
+                        .of(context)
+                        .colorScheme
+                        .tertiaryContainer,
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: SelectableText(message.text),
@@ -100,6 +124,49 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       );
+
+  void registerKeys(BuildContext context) async {
+    HotKey hotKey = HotKey(
+      KeyCode.keyT,
+      modifiers: [KeyModifier.control, KeyModifier.shift],
+      scope: HotKeyScope.system,
+    );
+
+    await hotKeyManager.register(
+      hotKey,
+      keyDownHandler: (hotKey) async {
+        logger.d("Hotkey pressed");
+        final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+        if (text == null || text.isEmpty) {
+          await FlutterPlatformAlert.playAlertSound(iconStyle: IconStyle.error);
+          logger.d("Clipboard empty");
+          return;
+        }
+        try {
+          if (!context.mounted) return;
+          final response = await context.read<HomeCubit>().askChat(text, GptMode.translate);
+          logger.d("Response: $response");
+          if (response.isNotEmpty) {
+            await FlutterPlatformAlert.playAlertSound(iconStyle: IconStyle.information);
+            final clickedButton = await FlutterPlatformAlert.showCustomAlert(
+                windowTitle: 'Translated text:',
+                text: response,
+                positiveButtonTitle: "Copy",
+                negativeButtonTitle: "Close",
+            );
+            if (clickedButton == CustomButton.positiveButton) {
+              Clipboard.setData(ClipboardData(text: response));
+            }
+          } else {
+            await FlutterPlatformAlert.playAlertSound(iconStyle: IconStyle.error);
+          }
+        } catch (e) {
+          await FlutterPlatformAlert.playAlertSound(iconStyle: IconStyle.error);
+          logger.e(e);
+        }
+      },
+    );
+  }
 }
 
 class _MessageBox extends StatefulWidget {
@@ -118,15 +185,15 @@ class _MessageBoxState extends State<_MessageBox> {
       children: [
         Expanded(
             child: TextField(
-          controller: _textEditingController,
-          decoration: InputDecoration(hintText: 'Enter text here'),
-        )),
+              controller: _textEditingController,
+              decoration: const InputDecoration(hintText: 'Enter text here'),
+            )),
         ElevatedButton(
           onPressed: () {
             context.read<HomeCubit>().sendMessage(_textEditingController.text);
             _textEditingController.clear();
           },
-          child: Text("Send"),
+          child: const Text("Send"),
         )
       ],
     );

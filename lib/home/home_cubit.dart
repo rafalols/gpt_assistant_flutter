@@ -18,7 +18,7 @@ class HomeCubit extends Cubit<HomeState> {
         isLoading: true,
         error: ""));
     try {
-      final response = await _gptRepository.askChat(message, state.gptMode);
+      final response = await askChat(message, state.gptMode);
       emit(state.copyWith(
           messages: [...state.messages, MessageData(text: response, sender: MessageSender.chatbot)],
           isLoading: false,
@@ -26,6 +26,11 @@ class HomeCubit extends Cubit<HomeState> {
     } catch (e) {
       emit(state.copyWith(error: e.toString(), isLoading: false));
     }
+  }
+
+  Future<String> askChat(String message, GptMode mode) async {
+    final response = await _gptRepository.askChat(message, mode);
+    return response;
   }
 
   void changeGptMode(GptMode mode) {

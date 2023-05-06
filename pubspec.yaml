@@ -44,6 +44,7 @@ dependencies:
   hotkey_manager: ^0.1.7
   http: ^0.13.3
   flutter_dotenv: ^5.0.2
+  flutter_platform_alert: ^0.3.0
 
 dev_dependencies:
   flutter_test:
