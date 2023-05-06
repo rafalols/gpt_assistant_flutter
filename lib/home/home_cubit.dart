@@ -14,13 +14,13 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> sendMessage(String message) async {
     emit(state.copyWith(
-        messages: [...state.messages, MessageData(text: message, sender: MessageSender.user)],
+        messages: [...state.messages, MessageData(text: message, sender: MessageSender.user, mode: state.gptMode)],
         isLoading: true,
         error: ""));
     try {
       final response = await askChat(message, state.gptMode);
       emit(state.copyWith(
-          messages: [...state.messages, MessageData(text: response, sender: MessageSender.chatbot)],
+          messages: [...state.messages, MessageData(text: response, sender: MessageSender.chatbot, mode: state.gptMode)],
           isLoading: false,
           error: ""));
     } catch (e) {
@@ -36,5 +36,9 @@ class HomeCubit extends Cubit<HomeState> {
   void changeGptMode(GptMode mode) {
     logger.d("changeGptMode $mode");
     emit(state.copyWith(gptMode: mode));
+  }
+
+  void clearMessages() {
+    emit(state.copyWith(messages: []));
   }
 }

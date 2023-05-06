@@ -99,26 +99,35 @@ class HomeScreen extends StatelessWidget {
             itemCount: state.messages.length,
             itemBuilder: (context, index) {
               final message = state.messages[index];
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Align(
-                  alignment: message.sender == MessageSender.user ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Card(
-                    color: message.sender == MessageSender.user
-                        ? Theme
-                        .of(context)
-                        .colorScheme
-                        .primaryContainer
-                        : Theme
-                        .of(context)
-                        .colorScheme
-                        .tertiaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: SelectableText(message.text),
+              final padding = message.sender == MessageSender.user
+                  ? const EdgeInsets.fromLTRB(64, 8, 8, 2)
+                  : const EdgeInsets.fromLTRB(8, 2, 64, 64);
+              return Column(
+                children: [
+                  if (message.sender == MessageSender.user) Divider(),
+                  if (message.sender == MessageSender.user) Text(message.mode.name),
+                  Padding(
+                    padding: padding,
+                    child: Align(
+                      alignment: message.sender == MessageSender.user ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Card(
+                        color: message.sender == MessageSender.user
+                            ? Theme
+                            .of(context)
+                            .colorScheme
+                            .primaryContainer
+                            : Theme
+                            .of(context)
+                            .colorScheme
+                            .tertiaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: SelectableText(message.text),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               );
             },
           ),
@@ -187,6 +196,10 @@ class _MessageBoxState extends State<_MessageBox> {
             child: TextField(
               controller: _textEditingController,
               decoration: const InputDecoration(hintText: 'Enter text here'),
+              onEditingComplete: () {
+                context.read<HomeCubit>().sendMessage(_textEditingController.text);
+                _textEditingController.clear();
+              },
             )),
         ElevatedButton(
           onPressed: () {
@@ -194,7 +207,13 @@ class _MessageBoxState extends State<_MessageBox> {
             _textEditingController.clear();
           },
           child: const Text("Send"),
-        )
+        ),
+        ElevatedButton(
+          onPressed: () {
+            context.read<HomeCubit>().clearMessages();
+          },
+          child: Text("Clear", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error)),
+        ),
       ],
     );
   }
